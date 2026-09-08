@@ -33,8 +33,8 @@ android {
         applicationId = "com.jixiexiaoge.drivingassist"
         minSdk = 29
         targetSdk = 35
-        versionCode = 260724
-        versionName = "v260724"
+        versionCode = 260725
+        versionName = "v260725"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -187,6 +187,9 @@ dependencies {
     // AppCompat - 已移除（原为腾讯SDK drawable主题解析）
 
     // HTTP客户端 - 用于导航确认API请求和反馈提交
+    // libVLC - 一键全屏投屏（播放设备 screencastd MPEG-TS 流）
+    implementation("org.videolan.android:libvlc-all:3.6.5")
+
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")

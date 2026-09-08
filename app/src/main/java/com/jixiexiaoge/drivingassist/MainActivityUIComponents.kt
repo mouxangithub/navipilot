@@ -223,6 +223,42 @@ object MainActivityUIComponents {
     }
 
     /**
+     * 分组折叠卡（UI/UX 方案 P0：高阶面板 4 组化改造的容器）
+     */
+    @Composable
+    fun ControlGroupCard(emoji: String, title: String, defaultOpen: Boolean, content: @Composable () -> Unit) {
+        var open by remember { mutableStateOf(defaultOpen) }
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Surface800.copy(alpha = 0.5f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { open = !open }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(emoji, fontSize = 13.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary, modifier = Modifier.weight(1f))
+                    Text(if (open) "▾" else "▸", fontSize = 12.sp, color = Color(0xFF94A3B8))
+                }
+                if (open) {
+                    Column(
+                        modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        content()
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 控制按钮组件（优化版 - 使用Material Icons + 动画效果）
      */
     @Composable
@@ -373,7 +409,7 @@ object MainActivityUIComponents {
         Column {
             // 标题栏
             Text(
-                text = "CP搭子免费开源版",
+                text = "sunnypilot搭子 · 功能面板",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -419,26 +455,11 @@ object MainActivityUIComponents {
                 // 根据屏幕方向动态设置行列数
                 val configuration = androidx.compose.ui.platform.LocalConfiguration.current
                 val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                val cols = if (isLandscape) 5 else 3
-                val rows = 15 / cols
                 val btnSize = if (isLandscape) 56.dp else 72.dp
                 val gridSpacing = if (isLandscape) 4.dp else 10.dp
-                Column(
-                    modifier = Modifier.padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(gridSpacing)
-                ) {
-                    var buttonIndex = 0
-                    for (row in 0 until rows) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            for (col in 0 until cols) {
-                                buttonIndex++
-                                val bn = buttonIndex
-                                // 按钮位置对调：1↔10, 2↔11, 3↔12（功能不变，仅布局位置交换）
-                                val mappedBn = when (bn) { 1 -> 10; 2 -> 11; 3 -> 12; 10 -> 1; 11 -> 2; 12 -> 3; else -> bn }
-                                when (mappedBn) {
+                // 分组化改造（UI/UX 方案 P0）：原 15 钮平铺网格 → 按钮构建器 + 4 组折叠卡
+                val gridButton: @Composable (Int) -> Unit = { mappedBn ->
+                when (mappedBn) {
                                     1 -> {
                                 Button(
                                     onClick = { showAboutDialog = true },
@@ -685,12 +706,162 @@ object MainActivityUIComponents {
                                     }
                                 }
                             }
+                            16 -> {
+                                // 🚦 红绿灯手动检测（DETECT，carrot_serv 已支持）
+                                Button(
+                                    onClick = { onSendCommand("DETECT", "Red Light,0.0,0.0,1.0") },
+                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                        Text("🚦", fontSize = 18.sp)
+                                        Text(localized("红绿灯", "Detect"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+                            17 -> {
+                                // ⚙️ ATC 自动转弯模式快切（0 禁用 / 1 自动变道 / 2 控速变道 / 3 导航限速）
+                                var atcMode by remember {
+                                    mutableStateOf(context.getSharedPreferences("CarrotAmap", android.content.Context.MODE_PRIVATE).getInt("atc_mode", 0))
+                                }
+                                val atcNames = arrayOf(localized("ATC\n关", "ATC\nOff"), localized("ATC\n变道", "ATC\nLane"), localized("ATC\n控速", "ATC\nSpeed"), localized("ATC\n限速", "ATC\nLimit"))
+                                val atcColors = arrayOf(Color(0xFF475569), Color(0xFF8B5CF6), Color(0xFF06B6D4), Color(0xFF22C55E))
+                                Button(
+                                    onClick = {
+                                        if (networkManager != null) {
+                                            val next = (atcMode + 1) % 4
+                                            context.getSharedPreferences("CarrotAmap", android.content.Context.MODE_PRIVATE).edit().putInt("atc_mode", next).apply()
+                                            atcMode = next
+                                            coroutineScope.launch { networkManager.sendAutoTurnControlChangeToComma3(next) }
+                                        }
+                                    },
+                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = atcColors[atcMode]),
+                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Text(atcNames[atcMode], fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 12.sp)
+                                }
+                            }
+                            18 -> {
+                                // 🐢 巡航 −5（连发 5 次 SPEED DOWN）
+                                Button(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            repeat(5) { onSendCommand("SPEED", "DOWN"); kotlinx.coroutines.delay(60) }
+                                        }
+                                    },
+                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                        Text("−5", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(localized("巡航", "Cruise"), fontSize = 8.sp, color = Color.White.copy(alpha = 0.8f))
+                                    }
+                                }
+                            }
+                            19 -> {
+                                // 🚀 巡航 +5（连发 5 次 SPEED UP）
+                                Button(
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            repeat(5) { onSendCommand("SPEED", "UP"); kotlinx.coroutines.delay(60) }
+                                        }
+                                    },
+                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0EA5E9)),
+                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                        Text("+5", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(localized("巡航", "Cruise"), fontSize = 8.sp, color = Color.White.copy(alpha = 0.8f))
+                                    }
+                                }
+                            }
+                            20 -> {
+                                // 📺 一键全屏投屏（设备 screencastd TCP 7080 + 触摸回传 7071）
+                                Button(
+                                    onClick = {
+                                        val ip = networkManager?.getCurrentDeviceIP()
+                                        context.startActivity(
+                                            android.content.Intent(context, com.jixiexiaoge.drivingassist.ScreenMirrorActivity::class.java)
+                                                .putExtra("device_ip", ip)
+                                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        )
+                                    },
+                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF12321F)),
+                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                        Text("📺", fontSize = 18.sp)
+                                        Text(localized("投屏", "Mirror"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34D399))
+                                    }
+                                }
+                            }
+                            21 -> {
+                                // ✅ 导航确认（内联入口）
+                                Button(
+                                    onClick = { onSendNavConfirmation() },
+                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF14B8A6)),
+                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                        Text("✅", fontSize = 18.sp)
+                                        Text(localized("确认", "Confirm"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
                             else -> {}
                         }
+                } // gridButton
+
+                // ===== 四组折叠卡（UI/UX 方案 P0） =====
+                ControlGroupCard("🧭", "导航", true) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(2)
+                        gridButton(8)
+                        gridButton(5)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(21)
                     }
                 }
-            }
-                } // Column
+                ControlGroupCard("🎮", "控车", true) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(3)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(4)
+                        gridButton(6)
+                        gridButton(16)
+                    }
+                }
+                ControlGroupCard("⚙️", "参数", false) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(13)
+                        gridButton(15)
+                        gridButton(17)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(18)
+                        gridButton(19)
+                    }
+                }
+                ControlGroupCard("🧰", "工具", false) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(1)
+                        gridButton(7)
+                        gridButton(20)
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gridSpacing)) {
+                        gridButton(10)
+                        gridButton(11)
+                        gridButton(12)
+                    }
+                }
             } // Card
 
             // 超车参数调节区域
@@ -713,7 +884,7 @@ object MainActivityUIComponents {
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("🚗 CP搭子3.0", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("🚗 sunnypilot搭子", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                         Text(localized("兼容 openpilot 全系 CP 用户", "Compatible with all openpilot CP users"), fontSize = 12.sp, color = TextSecondary)
                         Text(localized("含欧尚 Z6 等车型", "Including Oushan Z6 and more"), fontSize = 11.sp, color = Color(0xFF94A3B8))
                         Box(modifier = Modifier.fillMaxWidth().clickable { showAboutDialog = false }.padding(vertical = 4.dp), contentAlignment = Alignment.Center) {

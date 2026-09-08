@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="#0B0F14">
+
+  <LinearLayout
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:orientation="vertical"
+    android:gravity="center_horizontal">
+
+    <TextView
+      android:id="@+id/splash_icon"
+      android:layout_width="72dp"
+      android:layout_height="72dp"
+      android:background="@drawable/bg_splash_icon"
+      android:gravity="center"
+      android:text="S"
+      android:textColor="#06281A"
+      android:textSize="34sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:text="@string/app_name"
+      android:textColor="#ECF2F8"
+      android:textSize="26sp"
+      android:textStyle="bold"
+      android:letterSpacing="0.02" />
+
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="6dp"
+      android:text="导航联动 · 智能控车"
+      android:textColor="#5C6975"
+      android:textSize="13sp"
+      android:letterSpacing="0.1" />
+  </LinearLayout>
+</FrameLayout>

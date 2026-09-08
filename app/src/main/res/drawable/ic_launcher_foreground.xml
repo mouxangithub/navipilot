@@ -4,12 +4,15 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 字母 C — 更宽更开放 -->
+    <!-- 绿色圆角方块底（呼应启动页 S 图标） -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M28,44 C28,34 36,28 46,28 L46,38 C40,38 38,40 38,46 L38,62 C38,68 40,70 46,70 L46,80 C36,80 28,74 28,64 Z"/>
-    <!-- 字母 P — 更大更协调 -->
+        android:fillColor="#34D399"
+        android:pathData="M24,24 h60 a8,8 0 0 1 8,8 v44 a8,8 0 0 1 -8,8 h-60 a8,8 0 0 1 -8,-8 v-44 a8,8 0 0 1 8,-8 z" />
+    <!-- 白色 S 曲线（描边） -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M52,28 L72,28 C80,28 84,34 84,44 C84,54 80,60 72,60 L62,60 L62,80 L52,80 Z M62,38 L62,50 L68,50 C72,50 74,48 74,44 C74,40 72,38 68,38 Z"/>
+        android:pathData="M68,42 C64,36 60,34 54,34 C47,34 42,38 42,44 C42,56 66,54 66,66 C66,73 60,77 53,77 C47,77 42,74 39,68"
+        android:strokeColor="#06281A"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
 </vector>

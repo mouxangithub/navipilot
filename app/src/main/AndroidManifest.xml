@@ -87,13 +87,10 @@
             android:name="com.heytap.openid.disable"
             android:value="true" />
         <activity
-            android:name="com.jixiexiaoge.drivingassist.MainActivity"
+            android:name="com.jixiexiaoge.drivingassist.SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.DrivingAssist"
-            android:launchMode="singleTask"
-            android:screenOrientation="fullSensor"
-            android:configChanges="orientation|screenSize|keyboardHidden"
-            android:excludeFromRecents="false">
+            android:screenOrientation="userLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -101,7 +98,24 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name="com.jixiexiaoge.drivingassist.MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DrivingAssist"
+            android:launchMode="singleTask"
+            android:screenOrientation="userLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:excludeFromRecents="false">
+        </activity>
+
         <!-- LicenseVerificationActivity 已移除 -->
+
+        <!-- 一键全屏投屏页 -->
+        <activity
+            android:name="com.jixiexiaoge.drivingassist.ScreenMirrorActivity"
+            android:exported="false"
+            android:screenOrientation="userLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 前台服务 - 用于保持应用在后台稳定运行 -->
         <service

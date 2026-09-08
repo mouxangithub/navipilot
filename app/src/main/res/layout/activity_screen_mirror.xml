@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="#000000">
+
+  <SurfaceView
+    android:id="@+id/mirror_surface"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" />
+
+  <!-- 触点本地回显 -->
+  <View
+    android:id="@+id/touch_indicator"
+    android:layout_width="28dp"
+    android:layout_height="28dp"
+    android:background="@drawable/bg_touch_indicator"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/mirror_hint"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:text="正在连接投屏…"
+    android:textColor="#98A6B3"
+    android:textSize="14sp" />
+
+  <TextView
+    android:id="@+id/btn_retry"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:layout_marginTop="48dp"
+    android:background="#B3141A21"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
+    android:text="重试搜寻"
+    android:textColor="#34D399"
+    android:textSize="14sp"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/btn_open_main"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top|end"
+    android:layout_margin="12dp"
+    android:background="#B3141A21"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:text="☰ 操作界面"
+    android:textColor="#ECF2F8"
+    android:textSize="13sp" />
+
+  <!-- 底部浮动车控条（半透明，行车盲操） -->
+  <LinearLayout
+    android:id="@+id/floating_controls"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom|center_horizontal"
+    android:layout_marginBottom="16dp"
+    android:orientation="horizontal"
+    android:background="#66141A21"
+    android:padding="6dp">
+
+    <TextView
+      android:id="@+id/btn_bar_lane_left"
+      android:layout_width="wrap_content"
+      android:layout_height="44dp"
+      android:gravity="center"
+      android:paddingStart="18dp"
+      android:paddingEnd="18dp"
+      android:text="◀ 超车"
+      android:textColor="#F59E0B"
+      android:textSize="14sp"
+      android:textStyle="bold" />
+
+    <TextView
+      android:id="@+id/btn_bar_speed_down"
+      android:layout_width="wrap_content"
+      android:layout_height="44dp"
+      android:gravity="center"
+      android:paddingStart="16dp"
+      android:paddingEnd="16dp"
+      android:text="−5"
+      android:textColor="#ECF2F8"
+      android:textSize="14sp" />
+
+    <TextView
+      android:id="@+id/btn_bar_speed_up"
+      android:layout_width="wrap_content"
+      android:layout_height="44dp"
+      android:gravity="center"
+      android:paddingStart="16dp"
+      android:paddingEnd="16dp"
+      android:text="+5"
+      android:textColor="#ECF2F8"
+      android:textSize="14sp" />
+
+    <TextView
+      android:id="@+id/btn_bar_lane_right"
+      android:layout_width="wrap_content"
+      android:layout_height="44dp"
+      android:gravity="center"
+      android:paddingStart="18dp"
+      android:paddingEnd="18dp"
+      android:text="超车 ▶"
+      android:textColor="#F59E0B"
+      android:textSize="14sp"
+      android:textStyle="bold" />
+  </LinearLayout>
+</FrameLayout>

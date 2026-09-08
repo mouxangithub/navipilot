@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.jixiexiaoge.drivingassist.ui.theme.Surface700
 import com.jixiexiaoge.drivingassist.ui.theme.Surface800
 import com.jixiexiaoge.drivingassist.ui.theme.Surface900
+import com.jixiexiaoge.drivingassist.ui.theme.TextPrimary
 import com.jixiexiaoge.drivingassist.ui.theme.TextSecondary
 import com.jixiexiaoge.drivingassist.ui.theme.TextTertiary
 import androidx.compose.ui.platform.LocalConfiguration
@@ -673,6 +674,11 @@ class MainActivityUI(
     ) {
         val panelContext = LocalContext.current
         val scrollState = rememberScrollState()
+        var sidebarOpen by remember { mutableStateOf(UiPrefs.sidebarOpen(panelContext)) }
+        val setSidebarOpen: (Boolean) -> Unit = {
+            sidebarOpen = it
+            UiPrefs.setSidebarOpen(panelContext, it)
+        }
 
         // 解析设备端 ExperimentalMode 参数（与旧 SecondarySection 一致）
         fun parseExperimentalMode(value: Any?): Boolean? {
@@ -817,13 +823,114 @@ class MainActivityUI(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // 高级功能（嵌入到主页面板，置顶显示）
-                Card(
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Surface800.copy(alpha = 0.85f)),
-                    modifier = Modifier.fillMaxWidth()
+                // 顶栏：品牌名 + 连接状态徽章
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
+                    Text(
+                        text = localized("sunnypilot搭子", "sunnypilot Buddy"),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.weight(1f))
+                    val (badgeLabel, badgeColor) = when (commaConnectionState) {
+                        1 -> "已连接" to Color(0xFF22C55E)
+                        2 -> "连接异常" to Color(0xFFEF4444)
+                        else -> "等待连接" to Color(0xFF64748B)
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .background(Color(0xFF141A21), RoundedCornerShape(999.dp))
+                            .border(1.dp, badgeColor.copy(alpha = 0.5f), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Box(Modifier.size(6.dp).clip(CircleShape).background(badgeColor))
+                        Spacer(Modifier.width(5.dp))
+                        Text(badgeLabel, color = badgeColor, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = localized("投屏", "Mirror"),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF34D399),
+                        modifier = Modifier
+                            .background(Color(0xFF12321F), RoundedCornerShape(999.dp))
+                            .border(1.dp, Color(0xFF34D399), RoundedCornerShape(999.dp))
+                            .clickable {
+                                panelContext.startActivity(
+                                    android.content.Intent(panelContext, ScreenMirrorActivity::class.java)
+                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+
+                // 状态主卡：车速 / 巡航 / 限速
+                HomeStatusHero(carrotManFields = carrotManFields, commaConnectionState = commaConnectionState)
+
+                // 常驻快捷行（UI/UX 方案 P0）：静音 / 显示切换 / 投屏全屏 / 搜索 / 导航确认 + 编辑入口
+                com.jixiexiaoge.drivingassist.ui.components.QuickButtonsRow(
+                    carrotParamClient = carrotParamClient,
+                    getDeviceIp = { try { core.networkManager.getCurrentDeviceIP() } catch (_: Exception) { null } },
+                    onDisplayCommand = { arg -> onSendCommand("DISPLAY", arg) },
+                    onSearchClick = onSearchClick,
+                    onSendNavConfirmation = onSendNavConfirmation,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text(
+                    text = localized("点右缘 ☰ 呼出功能面板", "Tap ☰ on the right edge for functions"),
+                    fontSize = 11.sp,
+                    color = TextTertiary
+                )
+            } // 主列结束
+
+            // ===== 可隐藏功能侧边栏（默认收起，右缘把手呼出） =====
+            if (sidebarOpen) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .clickable { setSidebarOpen(false) }
+                )
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = sidebarOpen,
+                enter = androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }),
+                exit = androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }),
+                modifier = Modifier.align(Alignment.CenterEnd)
+            ) {
+                Surface(
+                    color = Surface900,
+                    modifier = Modifier.fillMaxHeight().width(330.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState())
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = localized("功能面板", "Functions"),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                text = "✕",
+                                color = Color(0xFF98A6B3),
+                                fontSize = 15.sp,
+                                modifier = Modifier.clickable { setSidebarOpen(false) }
+                            )
+                        }
                         MainActivityUIComponents.AdvancedFunctionsContent(
                             onSendCommand = onSendCommand,
                             onSendRoadLimitSpeed = onSendRoadLimitSpeed,
@@ -853,8 +960,85 @@ class MainActivityUI(
                         )
                     }
                 }
+            }
 
-                }  // Column 结束
+            // 右缘把手（常驻可见）
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(24.dp)
+                    .height(110.dp)
+                    .background(
+                        Color(0xFF141A21),
+                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                    )
+                    .border(1.dp, Color(UiPrefs.accentColor(panelContext)), RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                    .clickable { setSidebarOpen(!sidebarOpen) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (sidebarOpen) "⟩" else "☰",
+                    color = Color(UiPrefs.accentColor(panelContext)),
+                    fontSize = 15.sp
+                )
+            }
+        }
+    }
+
+    /** 状态主卡：车速 / 巡航 / 限速三大数字 */
+    @Composable
+    private fun HomeStatusHero(carrotManFields: CarrotManFields, commaConnectionState: Int) {
+        val connLabel = when (commaConnectionState) {
+            1 -> localized("已连接", "Connected")
+            2 -> localized("连接异常", "Error")
+            else -> localized("等待连接", "Waiting")
+        }
+        val connColor = when (commaConnectionState) {
+            1 -> Color(0xFF22C55E)
+            2 -> Color(0xFFEF4444)
+            else -> Color(0xFF64748B)
+        }
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Surface800.copy(alpha = 0.85f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(8.dp).clip(CircleShape).background(connColor))
+                    Spacer(Modifier.width(6.dp))
+                    Text(connLabel, color = connColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        if (carrotManFields.active) localized("控车运行中", "Engaged") else localized("控车待命", "Standby"),
+                        color = Color(0xFF98A6B3),
+                        fontSize = 12.sp
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    HeroNumber("${carrotManFields.vEgoKph.toInt()}", localized("车速", "Speed"), Color(0xFF60A5FA))
+                    HeroNumber("${carrotManFields.vCruiseKph.toInt()}", localized("巡航", "Cruise"), Color(0xFF34D399))
+                    HeroNumber(
+                        if (carrotManFields.nRoadLimitSpeed > 0) "${carrotManFields.nRoadLimitSpeed}" else "--",
+                        localized("限速", "Limit"),
+                        Color(0xFFFBBF24)
+                    )
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun HeroNumber(value: String, label: String, color: Color) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, fontSize = 34.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(label, fontSize = 11.sp, color = Color(0xFF98A6B3))
         }
     }
 
