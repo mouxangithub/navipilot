@@ -33,8 +33,8 @@ android {
         applicationId = "com.jixiexiaoge.drivingassist"
         minSdk = 29
         targetSdk = 35
-        versionCode = 260725
-        versionName = "v260725"
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 260725
+        versionName = (project.findProperty("versionName") as String?) ?: "v260725"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
