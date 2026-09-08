@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.SurfaceView
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import org.videolan.libvlc.LibVLC
 import org.videolan.libvlc.Media
 import org.videolan.libvlc.MediaPlayer
@@ -118,12 +119,14 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
     }
 
     // GitHub Release OTA：启动即检查（有更新在长生命周期页弹窗，同 tag 只弹一次）
-    AppUpdater.checkLatest(this) { release ->
+    AppUpdater.checkLatest(this) { release, error ->
       if (release != null) {
         handler.post {
           AppUpdater.pending = release
           AppUpdater.offerUpdate(this@ScreenMirrorActivity)
         }
+      } else if (error != null) {
+        handler.post { Toast.makeText(this@ScreenMirrorActivity, error, Toast.LENGTH_SHORT).show() }
       }
     }
 

@@ -228,6 +228,32 @@ private fun QuickButtonEditorDialog(
         val accentFg = Color(0xFF34D399)
         Text("投屏与外观", color = Color(0xFF98A6B3), fontSize = 12.sp, fontWeight = FontWeight.Medium)
 
+        // 检查更新（手动入口）
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("软件更新", color = Color(0xFFECF2F8), fontSize = 13.sp, modifier = Modifier.weight(1f))
+          Box(
+            modifier = Modifier
+              .background(accentOn, RoundedCornerShape(8.dp))
+              .clickable {
+                com.jixiexiaoge.drivingassist.AppUpdater.checkLatest(context) { release, error ->
+                  (context as? android.app.Activity)?.let { act ->
+                    act.runOnUiThread {
+                      when {
+                        release != null -> {
+                          com.jixiexiaoge.drivingassist.AppUpdater.pending = release
+                          com.jixiexiaoge.drivingassist.AppUpdater.offerUpdate(act)
+                        }
+                        error != null -> android.widget.Toast.makeText(act, error, android.widget.Toast.LENGTH_LONG).show()
+                        else -> android.widget.Toast.makeText(act, "已是最新版本", android.widget.Toast.LENGTH_SHORT).show()
+                      }
+                    }
+                  }
+                }
+              }
+              .padding(horizontal = 12.dp, vertical = 4.dp)
+          ) { Text("检查", color = accentFg, fontSize = 12.sp) }
+        }
+
         // 主题色
         var theme by remember { mutableStateOf(UiPrefs.themeColor(context)) }
         Row(verticalAlignment = Alignment.CenterVertically) {
