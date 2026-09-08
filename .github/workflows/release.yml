@@ -39,4 +39,4 @@ jobs:
           VERSION_CODE: ${{ github.event.inputs.version_code }}
           NOTES: ${{ github.event.inputs.notes }}
         run: |
-          gh release create "r$VERSION_CODE"             app/build/outputs/apk/debug/app-debug.apk             --title "sunnypilot-dazi r$VERSION_CODE"             --notes "$NOTES"             --target master
+          gh release create "r$VERSION_CODE" app/build/outputs/apk/debug/app-debug.apk --title "sunnypilot-dazi r$VERSION_CODE" --notes "$NOTES" --target master || gh release upload "r$VERSION_CODE" app/build/outputs/apk/debug/app-debug.apk --clobber
