@@ -25,7 +25,7 @@ user_invocable: true
 ## 模板
 
 ```kotlin
-package com.example.navipilot
+package com.mouxan.drivingassist
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test

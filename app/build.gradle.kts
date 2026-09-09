@@ -19,7 +19,7 @@ detekt {
 }
 
 android {
-    namespace = "com.jixiexiaoge.drivingassist"
+    namespace = "com.mouxan.drivingassist"
     compileSdk = 35
 
     val navAbiList: List<String> =
@@ -30,7 +30,7 @@ android {
             ?: listOf("arm64-v8a")
 
     defaultConfig {
-        applicationId = "com.jixiexiaoge.drivingassist"
+        applicationId = "com.mouxan.drivingassist"
         minSdk = 29
         targetSdk = 35
         versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 260726

@@ -25,7 +25,7 @@ Navipilot (CP搭子) 是一款专为 **comma3/openpilot** 设备打造的 Androi
 ### 项目信息
 
 - **版本**：v260530 (versionCode: 260530)
-- **包名**：`com.example.navipilot`
+- **包名**：`com.mouxan.drivingassist`
 - **最低要求**：Android 8.0 (API 26)
 - **目标平台**：Android 14 (API 35)
 - **架构支持**：arm64-v8a（默认），可选 armeabi-v7a
@@ -646,7 +646,7 @@ RELEASE_KEY_PASSWORD=your_key_password
 ### 核心模块
 
 ```
-com.example.navipilot/
+com.mouxan.drivingassist/
 ├── [应用入口与协调]
 │   ├── MainActivity.kt                  # 入口协调器
 │   ├── MainActivityCore.kt             # 核心业务逻辑

@@ -68,7 +68,7 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
-        android:name="com.jixiexiaoge.drivingassist.CarrotApplication"
+        android:name="com.mouxan.drivingassist.CarrotApplication"
         android:allowBackup="true"
         android:largeHeap="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -87,7 +87,7 @@
             android:name="com.heytap.openid.disable"
             android:value="true" />
         <activity
-            android:name="com.jixiexiaoge.drivingassist.SplashActivity"
+            android:name="com.mouxan.drivingassist.SplashActivity"
             android:exported="true"
             android:screenOrientation="userLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden">
@@ -99,7 +99,7 @@
         </activity>
 
         <activity
-            android:name="com.jixiexiaoge.drivingassist.MainActivity"
+            android:name="com.mouxan.drivingassist.MainActivity"
             android:exported="false"
             android:theme="@style/Theme.DrivingAssist"
             android:launchMode="singleTask"
@@ -112,14 +112,14 @@
 
         <!-- 一键全屏投屏页 -->
         <activity
-            android:name="com.jixiexiaoge.drivingassist.ScreenMirrorActivity"
+            android:name="com.mouxan.drivingassist.ScreenMirrorActivity"
             android:exported="false"
             android:screenOrientation="userLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
         <!-- 前台服务 - 用于保持应用在后台稳定运行 -->
         <service
-            android:name="com.jixiexiaoge.drivingassist.CarrotAmapForegroundService"
+            android:name="com.mouxan.drivingassist.CarrotAmapForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location"
@@ -127,7 +127,7 @@
         </service>
 
         <receiver
-            android:name="com.jixiexiaoge.drivingassist.AmapAutoStaticReceiver"
+            android:name="com.mouxan.drivingassist.AmapAutoStaticReceiver"
             android:exported="true"
             android:enabled="true"
             android:permission="android.permission.INTERNET">

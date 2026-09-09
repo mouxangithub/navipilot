@@ -14,8 +14,8 @@ Use the Gradle wrapper from repo root:
 
 # Tests
 ./gradlew test
-./gradlew test --tests "com.example.navipilot.GeoUtilsTest"
-./gradlew test --tests "com.example.navipilot.GeoUtilsTest.distanceTo_samePoint_returnsZero"
+./gradlew test --tests "com.mouxan.drivingassist.GeoUtilsTest"
+./gradlew test --tests "com.mouxan.drivingassist.GeoUtilsTest.distanceTo_samePoint_returnsZero"
 ./gradlew connectedAndroidTest
 ```
 

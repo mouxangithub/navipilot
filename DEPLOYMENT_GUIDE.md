@@ -15,7 +15,7 @@
 java.lang.InterruptedException
     at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.reportInterruptAfterWait(AbstractQueuedSynchronizer.java:2025)
     at java.util.concurrent.LinkedBlockingQueue.poll(LinkedBlockingQueue.java:430)
-    at com.jixiexiaoge.drivingassist.ScreenMirrorActivity$startTouchChannel$2.invoke(ScreenMirrorActivity.kt:331)
+    at com.mouxan.drivingassist.ScreenMirrorActivity$startTouchChannel$2.invoke(ScreenMirrorActivity.kt:331)
 ```
 
 **根因**：`touchQueue.poll(1, TimeUnit.SECONDS)` 在持有锁的 Condition 上等待时，如果线程被 `interrupt()`，会抛出 `InterruptedException`。原代码没有 catch，导致 `FATAL EXCEPTION: Thread-12`，App 直接崩溃。
@@ -76,7 +76,7 @@ adb install -r -d app/build/outputs/apk/debug/app-arm64-v8a-debug.apk
    ```
 3. **Native lib 压缩**：`packaging.jniLibs.useLegacyPackaging = false`，让 so 在 APK 中保持压缩。
 4. **剔除 libVLC 非必要资源**：`assets/subtitles/**`、`lua/meta`、`lua/extensions`、`lua/sd`。
-5. **修正 ProGuard 包名**：原规则里大量 `com.example.navipilot` 是错误包名，已改为 `com.jixiexiaoge.drivingassist`，让真正的业务代码可以被混淆/裁剪。
+5. **修正 ProGuard 包名**：原规则里大量 `com.mouxan.drivingassist` 是错误包名，已改为 `com.mouxan.drivingassist`，让真正的业务代码可以被混淆/裁剪。
 6. **PNG 压缩**：release 开启 `isCrunchPngs = true`。
 
 ### 2.3 进一步压缩空间（可选）

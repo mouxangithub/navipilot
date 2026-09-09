@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Navipilot (CP搭子) 是一款 Android 智能导航辅助应用，与 comma3/openpilot 设备联动，通过 UDP/TCP/HTTP 协议发送导航数据至 openpilot 设备辅助自动驾驶，同时提供驾驶行为评分。
 
 **版本**：v260530 (versionCode: 260530)
-**包名**：com.example.navipilot
+**包名**：com.mouxan.drivingassist
 **最低 SDK**：26 (Android 8.0)，**目标 SDK**：35
 
 ---
@@ -25,10 +25,10 @@ Navipilot (CP搭子) 是一款 Android 智能导航辅助应用，与 comma3/ope
 ./gradlew test
 
 # 运行单个测试类
-./gradlew test --tests "com.example.navipilot.GeoUtilsTest"
+./gradlew test --tests "com.mouxan.drivingassist.GeoUtilsTest"
 
 # 运行特定测试方法
-./gradlew test --tests "com.example.navipilot.GeoUtilsTest.distanceTo_samePoint_returnsZero"
+./gradlew test --tests "com.mouxan.drivingassist.GeoUtilsTest.distanceTo_samePoint_returnsZero"
 
 # 运行 instrumented 测试
 ./gradlew connectedAndroidTest
@@ -172,7 +172,7 @@ comma3 设备 → XiaogeDataReceiver (TCP 7711) → AutoOvertakeManager → ZMQ 
 ## 核心模块
 
 ```
-com.example.navipilot/
+com.mouxan.drivingassist/
 ├── MainActivity*.kt              # 入口 + 协调器（5 文件拆分）
 ├── CarrotManDataModels.kt        # UDP/TCP 协议数据模型 + CarrotManFields（中央状态容器 SSOT）
 ├── CarrotManNetworkClient.kt     # UDP 7706 + TCP 7709 发送

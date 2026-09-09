@@ -50,16 +50,16 @@
 # ===========================================
 # 应用入口与核心类（实际包名）
 # ===========================================
--keep class com.jixiexiaoge.drivingassist.CarrotApplication { *; }
--keep class com.jixiexiaoge.drivingassist.MainActivity { *; }
--keep class com.jixiexiaoge.drivingassist.SplashActivity { *; }
--keep class com.jixiexiaoge.drivingassist.ScreenMirrorActivity { *; }
--keep class com.jixiexiaoge.drivingassist.CarrotAmapForegroundService { *; }
--keep class com.jixiexiaoge.drivingassist.AmapAutoStaticReceiver { *; }
--keep class com.jixiexiaoge.drivingassist.AppUpdater { *; }
+-keep class com.mouxan.drivingassist.CarrotApplication { *; }
+-keep class com.mouxan.drivingassist.MainActivity { *; }
+-keep class com.mouxan.drivingassist.SplashActivity { *; }
+-keep class com.mouxan.drivingassist.ScreenMirrorActivity { *; }
+-keep class com.mouxan.drivingassist.CarrotAmapForegroundService { *; }
+-keep class com.mouxan.drivingassist.AmapAutoStaticReceiver { *; }
+-keep class com.mouxan.drivingassist.AppUpdater { *; }
 
 # Compose 导航/路由如果用到反射或序列化，保留相关类名
--keepnames class com.jixiexiaoge.drivingassist.** { *; }
+-keepnames class com.mouxan.drivingassist.** { *; }
 
 # ===========================================
 # Jetpack Compose
