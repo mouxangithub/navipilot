@@ -53,6 +53,7 @@ object QuickButtonStore {
     "display" to "显示",
     "search" to "搜索",
     "navconf" to "确认",
+    "webrtc" to "视频",
   )
 
   data class Config(val mode: Int, val order: List<String>, val hidden: Set<String>)
@@ -110,6 +111,7 @@ fun QuickButtonsRow(
         "display" -> Triple(if (showMap) "🗺️" else "🛣️", Color(0xFF1B232D), Color(0xFF98A6B3))
         "search" -> Triple("🔍", Color(0xFF1B232D), Color(0xFF98A6B3))
         "navconf" -> Triple("确认", Color(0xFF1B232D), Color(0xFF98A6B3))
+        "webrtc" -> Triple("视频", Color(0xFF12321F), Color(0xFF34D399))
         else -> Triple(id, Color(0xFF1B232D), Color(0xFF98A6B3))
       }
       QuickChip(label, bg, fg, Modifier.weight(1f)) {
@@ -132,6 +134,13 @@ fun QuickButtonsRow(
           }
           "search" -> onSearchClick()
           "navconf" -> onSendNavConfirmation()
+          "webrtc" -> {
+            context.startActivity(
+              Intent(context, com.mouxan.drivingassist.WebRtcActivity::class.java)
+                .putExtra("device_ip", getDeviceIp())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+          }
         }
       }
     }
