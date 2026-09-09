@@ -117,6 +117,13 @@
             android:screenOrientation="userLandscape"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
+        <!-- WebRTC 原生硬解播放页 -->
+        <activity
+            android:name="com.mouxan.drivingassist.WebRtcActivity"
+            android:exported="false"
+            android:screenOrientation="userLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
         <!-- 前台服务 - 用于保持应用在后台稳定运行 -->
         <service
             android:name="com.mouxan.drivingassist.CarrotAmapForegroundService"

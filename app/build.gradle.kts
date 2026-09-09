@@ -224,6 +224,9 @@ dependencies {
 
     // 投屏模块已移除（ScreenMirrorActivity/TcpDataSource/ExoPlayer 全部删除）
 
+    // WebRTC - 原生硬解播放车机 webrtcd 视频流（替代 WebView WebCodecs 软解）
+    implementation("org.webrtc:google-webrtc:1.0.32006")
+
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.google.code.gson:gson:2.10.1")
