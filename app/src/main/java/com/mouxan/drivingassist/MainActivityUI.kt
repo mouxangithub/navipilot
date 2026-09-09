@@ -851,29 +851,12 @@ class MainActivityUI(
                         Spacer(Modifier.width(5.dp))
                         Text(badgeLabel, color = badgeColor, fontSize = 12.sp)
                     }
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = localized("投屏", "Mirror"),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF34D399),
-                        modifier = Modifier
-                            .background(Color(0xFF12321F), RoundedCornerShape(999.dp))
-                            .border(1.dp, Color(0xFF34D399), RoundedCornerShape(999.dp))
-                            .clickable {
-                                panelContext.startActivity(
-                                    android.content.Intent(panelContext, ScreenMirrorActivity::class.java)
-                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            }
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
                 }
 
                 // 状态主卡：车速 / 巡航 / 限速
                 HomeStatusHero(carrotManFields = carrotManFields, commaConnectionState = commaConnectionState)
 
-                // 常驻快捷行（UI/UX 方案 P0）：静音 / 显示切换 / 投屏全屏 / 搜索 / 导航确认 + 编辑入口
+                // 常驻快捷行（UI/UX 方案 P0）：静音 / 显示切换 / 搜索 / 导航确认 + 编辑入口
                 com.mouxan.drivingassist.ui.components.QuickButtonsRow(
                     carrotParamClient = carrotParamClient,
                     getDeviceIp = { try { core.networkManager.getCurrentDeviceIP() } catch (_: Exception) { null } },

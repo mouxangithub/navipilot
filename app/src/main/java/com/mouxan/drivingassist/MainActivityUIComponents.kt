@@ -779,27 +779,6 @@ object MainActivityUIComponents {
                                     }
                                 }
                             }
-                            20 -> {
-                                // 📺 一键全屏投屏（设备 screencastd TCP 7080 + 触摸回传 7071）
-                                Button(
-                                    onClick = {
-                                        val ip = networkManager?.getCurrentDeviceIP()
-                                        context.startActivity(
-                                            android.content.Intent(context, com.mouxan.drivingassist.ScreenMirrorActivity::class.java)
-                                                .putExtra("device_ip", ip)
-                                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        )
-                                    },
-                                    modifier = Modifier.size(btnSize).shadow(4.dp, RoundedCornerShape(14.dp)),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF12321F)),
-                                    contentPadding = PaddingValues(0.dp), shape = RoundedCornerShape(14.dp)
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                        Text("📺", fontSize = 18.sp)
-                                        Text(localized("投屏", "Mirror"), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF34D399))
-                                    }
-                                }
-                            }
                             21 -> {
                                 // ✅ 导航确认（内联入口）
                                 Button(

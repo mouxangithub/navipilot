@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mouxan.drivingassist.CarrotParamClient
 import com.mouxan.drivingassist.UiPrefs
-import com.mouxan.drivingassist.ScreenMirrorActivity
 import kotlinx.coroutines.launch
 
 /**
@@ -52,7 +51,6 @@ object QuickButtonStore {
   val ALL: List<Pair<String, String>> = listOf(
     "mute" to "静音",
     "display" to "显示",
-    "mirror" to "投屏",
     "search" to "搜索",
     "navconf" to "确认",
   )
@@ -110,7 +108,6 @@ fun QuickButtonsRow(
       val (label, bg, fg) = when (id) {
         "mute" -> Triple(if (muteOn) "🔇" else "🔊", Color(0xFF1B232D), Color(0xFF98A6B3))
         "display" -> Triple(if (showMap) "🗺️" else "🛣️", Color(0xFF1B232D), Color(0xFF98A6B3))
-        "mirror" -> Triple("投屏", Color(0xFF12321F), Color(0xFF34D399))
         "search" -> Triple("🔍", Color(0xFF1B232D), Color(0xFF98A6B3))
         "navconf" -> Triple("确认", Color(0xFF1B232D), Color(0xFF98A6B3))
         else -> Triple(id, Color(0xFF1B232D), Color(0xFF98A6B3))
@@ -132,13 +129,6 @@ fun QuickButtonsRow(
             showMap = !showMap
             // DISPLAY MAP/ROAD —— carrot_serv 已支持的显示切换
             onDisplayCommand(if (showMap) "MAP" else "ROAD")
-          }
-          "mirror" -> {
-            context.startActivity(
-              Intent(context, ScreenMirrorActivity::class.java)
-                .putExtra("device_ip", getDeviceIp())
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
           }
           "search" -> onSearchClick()
           "navconf" -> onSendNavConfirmation()
@@ -223,10 +213,10 @@ private fun QuickButtonEditorDialog(
           Text("驾驶模式：仅保留静音与显示切换，防止行车分心", color = Color(0xFF5C6975), fontSize = 11.sp)
         }
 
-        // ---- 投屏与外观设置（立即生效） ----
+        // ---- 外观与更新设置（立即生效） ----
         val accentOn = Color(0xFF12321F)
         val accentFg = Color(0xFF34D399)
-        Text("投屏与外观", color = Color(0xFF98A6B3), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text("外观与更新", color = Color(0xFF98A6B3), fontSize = 12.sp, fontWeight = FontWeight.Medium)
 
         // 检查更新（手动入口）
         Row(verticalAlignment = Alignment.CenterVertically) {

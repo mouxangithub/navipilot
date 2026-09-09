@@ -110,13 +110,6 @@
 
         <!-- LicenseVerificationActivity 已移除 -->
 
-        <!-- 一键全屏投屏页 -->
-        <activity
-            android:name="com.mouxan.drivingassist.ScreenMirrorActivity"
-            android:exported="false"
-            android:screenOrientation="userLandscape"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
-
         <!-- 前台服务 - 用于保持应用在后台稳定运行 -->
         <service
             android:name="com.mouxan.drivingassist.CarrotAmapForegroundService"

@@ -222,12 +222,7 @@ dependencies {
 
     // AppCompat - 已移除（原为腾讯SDK drawable主题解析）
 
-    // HTTP客户端 - 用于导航确认API请求和反馈提交
-    // libVLC - 一键全屏投屏（播放设备 screencastd MPEG-TS 流）
-    // 长期建议：仅播放 H.264/MPEG-TS over TCP，可替换为 ExoPlayer + FFmpeg extension 或自研 MediaCodec，APK 可减小 30-40MB
-    implementation("org.videolan.android:libvlc-all:3.6.5")
-    // 若功能满足可切换为精简版 libvlc（体积小很多，但需验证编解码支持）：
-    // implementation("org.videolan.android:libvlc:3.6.5")
+    // 投屏模块已移除（ScreenMirrorActivity/TcpDataSource/ExoPlayer 全部删除）
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")

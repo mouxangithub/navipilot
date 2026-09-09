@@ -22,7 +22,7 @@ class SplashActivity : Activity() {
       .or(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION)
       .or(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
     handler.postDelayed({
-      startActivity(Intent(this, ScreenMirrorActivity::class.java))
+      startActivity(Intent(this, MainActivity::class.java))
       finish()
     }, splashMs)
   }

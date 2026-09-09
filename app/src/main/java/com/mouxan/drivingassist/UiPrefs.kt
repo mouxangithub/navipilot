@@ -5,7 +5,7 @@ import android.content.Context
 /**
  * 统一偏好与本地埋点：
  *  - 侧边栏开合记忆（功能补全 #4）
- *  - 投屏 network-caching 延迟（#6）
+ *  - 网络缓存延迟（carrot 导航 / WebRTC 共用，#6）
  *  - 主题色 green/blue（#8）
  *  - 启动页时长（#9）
  *  - 连接质量埋点 → 应用外部私有目录 connection_log.txt（#10）
