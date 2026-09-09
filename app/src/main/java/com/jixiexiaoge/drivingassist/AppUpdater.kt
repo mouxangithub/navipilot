@@ -3,19 +3,28 @@ package com.jixiexiaoge.drivingassist
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.DownloadManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * GitHub Release OTA：
@@ -31,7 +40,7 @@ import java.util.concurrent.TimeUnit
  *   - 全部失败时回调 error，调用方可见化提示。
  *
  * 流程：启动后台请求 releases/latest → tag 数字 > 本地 longVersionCode
- *   → 投屏页弹更新对话框 → DownloadManager 下载 → FileProvider 拉起系统安装器。
+ *   → 弹更新对话框 → DownloadManager 下载（带通知进度） → FileProvider 拉起系统安装器。
  */
 object AppUpdater {
 
@@ -43,13 +52,15 @@ object AppUpdater {
 
   private const val PREFS = "sunny_ota"
   private const val KEY_MIRROR = "working_mirror"
+  private const val CHANNEL_ID = "ota_update"
+  private const val NOTIFICATION_ID = 0x4F54 // "OT"
 
   private val http = OkHttpClient.Builder()
     .connectTimeout(8, TimeUnit.SECONDS)
     .readTimeout(20, TimeUnit.SECONDS)
     .build()
 
-  /** 待提示的更新（检查通过 → 长生命周期页弹窗） */
+  /** 待提示的更新（检查通过 → 弹窗） */
   @Volatile
   var pending: Release? = null
 
@@ -73,7 +84,6 @@ object AppUpdater {
   fun checkLatest(context: Context, onResult: (Release?, String?) -> Unit) {
     Thread {
       var lastError: String? = null
-      // 先用上次成功的镜像（若有），再轮询全部
       val mirrors = buildList {
         val last = workingMirror(context)
         if (last.isNotEmpty() && MIRRORS.contains(last)) add(last)
@@ -133,7 +143,7 @@ object AppUpdater {
     }
   }
 
-  /** 在长生命周期页面弹更新确认框（同一 tag 只弹一次） */
+  /** 在 Activity 弹更新确认框（同一 tag 只弹一次） */
   fun offerUpdate(activity: Activity) {
     val release = pending ?: return
     if (offeredTag == "r${release.versionCode}") return
@@ -146,14 +156,14 @@ object AppUpdater {
       .show()
   }
 
-  /** DownloadManager 下载 APK（自动带可用镜像前缀），完成后自动拉起安装器 */
+  /** DownloadManager 下载 APK（自动带可用镜像前缀），完成后自动拉起安装器；带通知进度 */
   fun downloadAndInstall(context: Context, release: Release) {
+    ensureNotificationChannel(context)
     val mirror = workingMirror(context)
     val url = mirror + release.apkUrl
     val apkName = "sunnypilot_dazi_r${release.versionCode}.apk"
     val target = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), apkName)
     if (target.exists() && target.length() > 0) {
-      // 断点续装：上次已下载完成但未安装
       installApk(context, target)
       return
     }
@@ -161,35 +171,120 @@ object AppUpdater {
     val request = DownloadManager.Request(Uri.parse(url))
       .setTitle("sunnypilot搭子 r${release.versionCode}")
       .setDescription("下载完成后自动弹出安装")
-      .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+      // VISIBILITY_VISIBLE：系统通知栏自带下载进度，无需额外权限
+      .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
       .setDestinationUri(Uri.fromFile(target))
+      .setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE)
     val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     val downloadId = dm.enqueue(request)
+
+    val cancelled = AtomicBoolean(false)
+    val progressRunnable = object : Runnable {
+      override fun run() {
+        if (cancelled.get()) return
+        val (bytes, total, status) = queryProgress(dm, downloadId)
+        when (status) {
+          DownloadManager.STATUS_SUCCESSFUL -> {
+            showNotification(context, "下载完成", "点击安装新版本", 100, true)
+            if (target.exists() && target.length() > 0) {
+              UiPrefs.appendLog(context, "ota downloaded r${release.versionCode} size=${target.length()} mirror=$mirror")
+              installApk(context, target)
+            }
+            return
+          }
+          DownloadManager.STATUS_FAILED -> {
+            showNotification(context, "下载失败", "请检查网络后重试", -1, false)
+            UiPrefs.appendLog(context, "ota download failed r${release.versionCode} mirror=$mirror reason=${dm.getUriForDownloadedFile(downloadId)}")
+            Toast.makeText(context, "更新下载失败，请检查网络后重试", Toast.LENGTH_LONG).show()
+            return
+          }
+          else -> {
+            val pct = if (total > 0) (bytes * 100 / total).toInt() else -1
+            showNotification(context, "正在下载更新 r${release.versionCode}", formatBytes(bytes) + "/" + formatBytes(total), pct, false)
+            Handler(Looper.getMainLooper()).postDelayed(this, 500)
+          }
+        }
+      }
+    }
+    Handler(Looper.getMainLooper()).post(progressRunnable)
 
     val receiver = object : BroadcastReceiver() {
       override fun onReceive(ctx: Context, intent: Intent) {
         if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != downloadId) return
         try { context.unregisterReceiver(this) } catch (_: Exception) {}
-        val done = dm.getUriForDownloadedFile(downloadId)
-        if (done != null && target.exists() && target.length() > 0) {
-          UiPrefs.appendLog(context, "ota downloaded r${release.versionCode} size=${target.length()} mirror=$mirror")
-          installApk(ctx, target)
-        } else {
-          UiPrefs.appendLog(context, "ota download failed r${release.versionCode} mirror=$mirror")
-          Toast.makeText(ctx, "更新下载失败，请检查网络后重试", Toast.LENGTH_LONG).show()
-        }
+        cancelled.set(true)
       }
     }
-    if (android.os.Build.VERSION.SDK_INT >= 33) {
+    if (Build.VERSION.SDK_INT >= 33) {
       context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED)
     } else {
       context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))
     }
   }
 
+  private fun queryProgress(dm: DownloadManager, id: Long): Triple<Long, Long, Int> {
+    val q = DownloadManager.Query().setFilterById(id)
+    dm.query(q)?.use { c ->
+      if (c.moveToFirst()) {
+        val bytesIdx = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+        val totalIdx = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+        val statusIdx = c.getColumnIndex(DownloadManager.COLUMN_STATUS)
+        return Triple(
+          if (bytesIdx >= 0) c.getLong(bytesIdx) else 0L,
+          if (totalIdx >= 0) c.getLong(totalIdx) else 0L,
+          if (statusIdx >= 0) c.getInt(statusIdx) else DownloadManager.STATUS_PENDING
+        )
+      }
+    }
+    return Triple(0L, 0L, DownloadManager.STATUS_PENDING)
+  }
+
+  private fun formatBytes(bytes: Long): String {
+    if (bytes <= 0) return "0B"
+    val units = arrayOf("B", "KB", "MB", "GB")
+    var size = bytes.toDouble()
+    var unit = 0
+    while (size >= 1024 && unit < units.size - 1) {
+      size /= 1024
+      unit++
+    }
+    return String.format("%.1f%s", size, units[unit])
+  }
+
+  private fun ensureNotificationChannel(context: Context) {
+    if (Build.VERSION.SDK_INT < 26) return
+    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    if (nm.getNotificationChannel(CHANNEL_ID) != null) return
+    val channel = NotificationChannel(
+      CHANNEL_ID,
+      "应用更新",
+      NotificationManager.IMPORTANCE_LOW
+    ).apply {
+      description = "OTA 在线更新下载进度"
+      setSound(null, null)
+    }
+    nm.createNotificationChannel(channel)
+  }
+
+  private fun showNotification(context: Context, title: String, text: String, progress: Int, indeterminateOrComplete: Boolean) {
+    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+      .setSmallIcon(android.R.drawable.stat_sys_download)
+      .setContentTitle(title)
+      .setContentText(text)
+      .setOngoing(progress in 0..99)
+      .setOnlyAlertOnce(true)
+    if (progress in 0..99) {
+      builder.setProgress(100, progress, false)
+    } else if (indeterminateOrComplete) {
+      builder.setProgress(0, 0, false)
+    }
+    nm.notify(NOTIFICATION_ID, builder.build())
+  }
+
   /** FileProvider + 系统安装器；Android 8+ 先引导未知来源授权 */
   private fun installApk(context: Context, apk: File) {
-    if (!context.packageManager.canRequestPackageInstalls()) {
+    if (Build.VERSION.SDK_INT >= 26 && !context.packageManager.canRequestPackageInstalls()) {
       Toast.makeText(context, "请先允许本应用「安装未知应用」权限", Toast.LENGTH_LONG).show()
       try {
         context.startActivity(

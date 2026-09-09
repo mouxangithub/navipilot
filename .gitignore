@@ -15,8 +15,10 @@
 local.properties
 "*.hprof"
 
-# API Keys — 本地配置，不提交到仓库
+# API Keys / signing — 本地配置，不提交到仓库
 secrets.properties
+app/release.keystore
+*.jks
 
 # AtomCode local-scope configs (machine-specific)
 .atomcode/local/

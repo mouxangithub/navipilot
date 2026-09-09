@@ -1,44 +1,118 @@
-name: Release OTA
+name: Build and Release
 
 on:
   workflow_dispatch:
     inputs:
       version_code:
-        description: 'versionCode (must be greater than latest, e.g. 260725)'
+        description: 'versionCode (must be greater than latest, e.g. 260901)'
         required: true
       version_name:
-        description: 'versionName (e.g. v260725)'
+        description: 'versionName (e.g. v260901)'
         required: true
       notes:
-        description: 'release notes'
+        description: 'Release notes'
         required: false
         default: ''
+  push:
+    tags:
+      - 'r*'
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      VERSION_CODE: ${{ github.event.inputs.version_code || github.ref_name }}
+      VERSION_NAME: ${{ github.event.inputs.version_name || github.ref_name }}
+      NOTES: ${{ github.event.inputs.notes || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Build APK
+      - name: Decode release keystore
         run: |
-          rm -f gradle/gradle-daemon-jvm.properties
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon -PversionCode=$VERSION_CODE -PversionName=$VERSION_NAME
-        env:
-          VERSION_CODE: ${{ github.event.inputs.version_code }}
-          VERSION_NAME: ${{ github.event.inputs.version_name }}
+          mkdir -p app
+          echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+        # 如果仓库没有配置 secrets，这里会失败；本地调试请使用 debug 签名
 
-      - name: Create Release
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build signed Release APK (multi-ABI)
+        run: |
+          ./gradlew assembleRelease \
+            --no-daemon \
+            -PversionCode=$VERSION_CODE \
+            -PversionName=$VERSION_NAME \
+            -Pnavipilot.abis=arm64-v8a,armeabi-v7a,x86_64
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+
+      - name: Build signed Release AAB
+        run: |
+          ./gradlew bundleRelease \
+            --no-daemon \
+            -PversionCode=$VERSION_CODE \
+            -PversionName=$VERSION_NAME
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+
+      - name: Align and verify APKs
+        run: |
+          ls -lh app/build/outputs/apk/release/
+          for apk in app/build/outputs/apk/release/*.apk; do
+            zipalign -c -v 4 "$apk" || true
+          done
+
+      - name: Compress artifacts
+        run: |
+          mkdir -p release-assets
+          cp app/build/outputs/apk/release/*.apk release-assets/
+          cp app/build/outputs/bundle/release/*.aab release-assets/
+          cd release-assets
+          zip -9 "../sunnypilot-dazi-r${VERSION_CODE}.zip" *.apk *.aab
+          cd ..
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sunnypilot-dazi-r${{ env.VERSION_CODE }}
+          path: release-assets/*
+          if-no-files-found: error
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION_CODE: ${{ github.event.inputs.version_code }}
-          NOTES: ${{ github.event.inputs.notes }}
         run: |
-          gh release create "r$VERSION_CODE" app/build/outputs/apk/debug/app-debug.apk --title "sunnypilot-dazi r$VERSION_CODE" --notes "$NOTES" --target master || gh release upload "r$VERSION_CODE" app/build/outputs/apk/debug/app-debug.apk --clobber
+          TAG="r${VERSION_CODE}"
+          gh release create "$TAG" \
+            --title "sunnypilot-dazi ${VERSION_NAME}" \
+            --notes "${NOTES:-Release ${VERSION_NAME}}" \
+            --target ${{ github.ref_name }} \
+            "sunnypilot-dazi-r${VERSION_CODE}.zip" \
+            release-assets/*.apk \
+            release-assets/*.aab
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f app/release.keystore

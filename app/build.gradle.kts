@@ -44,46 +44,74 @@ android {
         if (localPropsFile.exists()) props.load(localPropsFile.inputStream())
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${props.getProperty("GITHUB_CLIENT_ID", "Ov23ctaOHfiktpd9aTE6")}\"")
 
-        ndk {
-            abiFilters.clear()
-            abiFilters.addAll(navAbiList)
-        }
     }
 
 
-    // 签名配置（从 local.properties 读取，不硬编码密码）
+    // 签名配置：优先从 Gradle project property (-P) 读取，支持 CI；其次 local.properties
     signingConfigs {
         create("release") {
             val props = Properties()
             val localPropsFile = rootProject.file("local.properties")
             if (localPropsFile.exists()) props.load(localPropsFile.inputStream())
-            
+
+            fun resolve(name: String): String =
+                (project.findProperty(name) as String?) ?: props.getProperty(name, "")
+
             storeFile = file("release.keystore")
-            storePassword = props.getProperty("RELEASE_STORE_PASSWORD", "")
-            keyAlias = props.getProperty("RELEASE_KEY_ALIAS", "")
-            keyPassword = props.getProperty("RELEASE_KEY_PASSWORD", "")
+            storePassword = resolve("RELEASE_STORE_PASSWORD")
+            keyAlias = resolve("RELEASE_KEY_ALIAS")
+            keyPassword = resolve("RELEASE_KEY_PASSWORD")
+        }
+    }
+
+    // 体积优化：按 ABI 拆包 + 构建 AAB；CI 通过 -Pnavipilot.abis 控制输出范围
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = false
+        }
+    }
+
+    bundle {
+        // AAB 原生库不压缩，安装时按设备 ABI 分发且无需解压，降低安装后占用
+        storeArchive {
+            enable = false
         }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // 体积优化：R8 代码混淆+裁剪 + 资源裁剪（libVLC 占大头，长期建议替换为 MediaCodec/ExoPlayer）
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = false
             isJniDebuggable = false
             isPseudoLocalesEnabled = false
             isCrunchPngs = true
             signingConfig = signingConfigs.getByName("release")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
         debug {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            // 体积优化：debug 亦开 R8 + 资源裁剪（本地环测无需热重载）
+            isMinifyEnabled = true
+            isShrinkResources = true
             isDebuggable = true
             isJniDebuggable = false
             isPseudoLocalesEnabled = false
             isCrunchPngs = false
+            // 本地 debug 使用默认 debug 签名；CI release 才用 release keystore
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
             packaging {
                 jniLibs {
+                    useLegacyPackaging = false
                     pickFirsts += listOf("**/libc++_shared.so")
                     keepDebugSymbols += setOf(
                         "*/libc++_shared.so",
@@ -131,8 +159,14 @@ android {
         disable += "PackagedPrivateKey"
     }
 
-    // R8优化配置
+    // R8优化配置 + native libs 安装时解压（减小 APK 体积并提升运行时性能）
     packaging {
+        jniLibs {
+            useLegacyPackaging = false
+            pickFirsts += listOf(
+                "**/libc++_shared.so",
+            )
+        }
         resources {
             excludes += setOf(
                 "META-INF/DEPENDENCIES",
@@ -151,11 +185,11 @@ android {
                 "META-INF/versions/*",
                 "META-INF/INDEX.LIST",
                 "META-INF/io.netty.versions.properties",
-            )
-        }
-        jniLibs {
-            pickFirsts += listOf(
-                "**/libc++_shared.so",
+                // libVLC 内置的大量资源可按需裁剪；如果保留 libvlc-all，先去掉不常用字幕/字体
+                "assets/subtitles/**",
+                "assets/lua/meta/**",
+                "assets/lua/extensions/**",
+                "assets/lua/sd/**",
             )
         }
     }
@@ -176,6 +210,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
+    // ActivityResult API 需要 Fragment >= 1.3.0；强制覆盖旧版本 transitive
+    implementation("androidx.fragment:fragment:1.6.2")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
@@ -188,7 +224,10 @@ dependencies {
 
     // HTTP客户端 - 用于导航确认API请求和反馈提交
     // libVLC - 一键全屏投屏（播放设备 screencastd MPEG-TS 流）
+    // 长期建议：仅播放 H.264/MPEG-TS over TCP，可替换为 ExoPlayer + FFmpeg extension 或自研 MediaCodec，APK 可减小 30-40MB
     implementation("org.videolan.android:libvlc-all:3.6.5")
+    // 若功能满足可切换为精简版 libvlc（体积小很多，但需验证编解码支持）：
+    // implementation("org.videolan.android:libvlc:3.6.5")
 
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     debugImplementation("com.squareup.okhttp3:logging-interceptor:4.12.0")

@@ -65,6 +65,7 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
   /** 多设备选择的用户决定（发现线程经 latch 等待 UI 选择） */
   @Volatile
   private var chosenIp: String? = null
+  private var devicePickLatch: CountDownLatch? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -86,18 +87,23 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
       startAutoConnect()
     }
 
-    libVlc = LibVLC(this)
-    player = MediaPlayer(libVlc).apply {
-      setEventListener { ev ->
-        if (ev.type == org.videolan.libvlc.MediaPlayer.Event.EndReached
-          || ev.type == org.videolan.libvlc.MediaPlayer.Event.EncounteredError
-        ) {
-          streamError = true
+    try {
+      libVlc = LibVLC(this.applicationContext)
+      player = MediaPlayer(libVlc).apply {
+        setEventListener { ev ->
+          if (ev.type == org.videolan.libvlc.MediaPlayer.Event.EndReached
+            || ev.type == org.videolan.libvlc.MediaPlayer.Event.EncounteredError
+          ) {
+            streamError = true
+          }
         }
+        val vout = getVLCVout()
+        vout.setVideoView(findViewById<SurfaceView>(R.id.mirror_surface))
+        vout.attachViews(this@ScreenMirrorActivity)
       }
-      val vout = getVLCVout()
-      vout.setVideoView(findViewById<SurfaceView>(R.id.mirror_surface))
-      vout.attachViews(this@ScreenMirrorActivity)
+    } catch (e: Exception) {
+      UiPrefs.appendLog(this, "vlc init error: ${e.message}")
+      Toast.makeText(this, "视频引擎初始化失败：${e.message}", Toast.LENGTH_LONG).show()
     }
 
     val surface = findViewById<SurfaceView>(R.id.mirror_surface)
@@ -120,13 +126,18 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
 
     // GitHub Release OTA：启动即检查（有更新在长生命周期页弹窗，同 tag 只弹一次）
     AppUpdater.checkLatest(this) { release, error ->
+      if (isFinishing || isDestroyed) return@checkLatest
       if (release != null) {
         handler.post {
+          if (isFinishing || isDestroyed) return@post
           AppUpdater.pending = release
           AppUpdater.offerUpdate(this@ScreenMirrorActivity)
         }
       } else if (error != null) {
-        handler.post { Toast.makeText(this@ScreenMirrorActivity, error, Toast.LENGTH_SHORT).show() }
+        handler.post {
+          if (isFinishing || isDestroyed) return@post
+          Toast.makeText(this@ScreenMirrorActivity, error, Toast.LENGTH_SHORT).show()
+        }
       }
     }
 
@@ -157,7 +168,9 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
     resumed = false
     player?.stop()
     connectThread?.interrupt()
-    touchThread?.interrupt()
+    stopTouchChannel()
+    // 若多设备选择弹窗仍在阻塞发现线程，立即释放，避免线程 leak/crash
+    devicePickLatch?.countDown()
   }
 
   private fun hideSystemBars() {
@@ -242,8 +255,14 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
   /** 多设备时在 UI 线程弹选择框，阻塞发现线程直至用户选择 */
   private fun askUserToPickDevice(devices: List<CarrotDiscovery.Device>): CarrotDiscovery.Device? {
     val latch = CountDownLatch(1)
+    // 保存到成员变量，Activity 销毁时可强制释放，避免发现线程永远阻塞
+    devicePickLatch = latch
     chosenIp = null
     handler.post {
+      if (isFinishing || isDestroyed) {
+        latch.countDown()
+        return@post
+      }
       val labels = devices.map { d ->
         val road = if (d.onroad) " · 行车中" else ""
         "${d.ip}  ${d.version}$road"
@@ -255,18 +274,25 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
           latch.countDown()
         }
         .setOnCancelListener { latch.countDown() }
+        .setOnDismissListener { latch.countDown() }
         .show()
     }
     try {
       latch.await()
     } catch (e: InterruptedException) {
+      Thread.currentThread().interrupt()
       return null
+    } finally {
+      devicePickLatch = null
     }
     return devices.firstOrNull { it.ip == chosenIp }
   }
 
   private fun startVideo(ip: String) {
-    val p = player ?: return
+    val p = player ?: run {
+      setHint("视频引擎未就绪")
+      return
+    }
     if (p.isPlaying) p.stop()
     val media = Media(libVlc, "tcp://$ip:$VIDEO_PORT")
     media.addOption(":network-caching=${UiPrefs.networkCachingMs(this)}")
@@ -305,14 +331,16 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
   // ---- 触摸回传通道（TCP 7071，断线自动重连） ---- //
 
   private fun startTouchChannel() {
-    touchThread?.interrupt()
+    val t = touchThread
+    if (t != null && t.isAlive) return   // 已在运行，避免重复启动多个线程
     touchThread = Thread {
       var out: OutputStream? = null
-      while (!Thread.currentThread().isInterrupted) {
+      var running = true
+      while (running) {
         val ip = deviceIp
         if (out == null) {
           if (ip == null) {
-            try { Thread.sleep(500) } catch (e: InterruptedException) { break }
+            try { Thread.sleep(500) } catch (e: InterruptedException) { running = false; break }
             continue
           }
           try {
@@ -324,11 +352,19 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
           } catch (e: Exception) {
             try { touchSocket?.close() } catch (_: Exception) {}
             touchSocket = null
-            try { Thread.sleep(500) } catch (e2: InterruptedException) { break }
+            try { Thread.sleep(500) } catch (e2: InterruptedException) { running = false; break }
             continue
           }
         }
-        val line = touchQueue.poll(1, java.util.concurrent.TimeUnit.SECONDS) ?: continue
+        val line = try {
+          touchQueue.poll(1, java.util.concurrent.TimeUnit.SECONDS)
+        } catch (e: InterruptedException) {
+          // 收到中断信号：恢复标志、退出循环
+          Thread.currentThread().interrupt()
+          running = false
+          break
+        }
+        if (line == null) continue
         try {
           out.write((line + "\n").toByteArray(Charsets.UTF_8))
           out.flush()
@@ -339,6 +375,7 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
         }
       }
       try { touchSocket?.close() } catch (_: Exception) {}
+      touchSocket = null
     }.also { it.isDaemon = true; it.start() }
   }
 
@@ -362,8 +399,10 @@ class ScreenMirrorActivity : Activity(), IVLCVout.OnNewVideoLayoutListener {
 
   override fun onDestroy() {
     super.onDestroy()
+    resumed = false
     connectThread?.interrupt()
     touchThread?.interrupt()
+    devicePickLatch?.countDown()
     player?.getVLCVout()?.detachViews()
     player?.release()
     libVlc?.release()
