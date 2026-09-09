@@ -244,6 +244,24 @@ private fun QuickButtonEditorDialog(
           ) { Text("检查", color = accentFg, fontSize = 12.sp) }
         }
 
+        // WebUI 1:1 还原入口
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Text("WebUI 完整面板", color = Color(0xFFECF2F8), fontSize = 13.sp, modifier = Modifier.weight(1f))
+          Box(
+            modifier = Modifier
+              .background(accentOn, RoundedCornerShape(8.dp))
+              .clickable {
+                val ip = com.mouxan.drivingassist.CarrotDiscovery.discoverMultiple(1).firstOrNull()?.ip
+                context.startActivity(
+                  android.content.Intent(context, com.mouxan.drivingassist.WebUiActivity::class.java)
+                    .putExtra("device_ip", ip)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+              }
+              .padding(horizontal = 12.dp, vertical = 4.dp)
+          ) { Text("打开", color = accentFg, fontSize = 12.sp) }
+        }
+
         // 主题色
         var theme by remember { mutableStateOf(UiPrefs.themeColor(context)) }
         Row(verticalAlignment = Alignment.CenterVertically) {

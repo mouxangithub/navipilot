@@ -110,6 +110,13 @@
 
         <!-- LicenseVerificationActivity 已移除 -->
 
+        <!-- WebUI 1:1 还原页（加载车机 webui） -->
+        <activity
+            android:name="com.mouxan.drivingassist.WebUiActivity"
+            android:exported="false"
+            android:screenOrientation="userLandscape"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
+
         <!-- 前台服务 - 用于保持应用在后台稳定运行 -->
         <service
             android:name="com.mouxan.drivingassist.CarrotAmapForegroundService"
